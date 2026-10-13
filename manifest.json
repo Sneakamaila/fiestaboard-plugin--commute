@@ -1,0 +1,446 @@
+{
+  "id": "commute",
+  "name": "Smart Commute & Traffic",
+  "version": "0.1.0",
+  "description": "Compare alternative commute routes, waypoints, and travel times with real-time traffic for Vestaboard.",
+  "author": "Sneakamaila",
+  "icon": "navigation",
+  "category": "travel",
+  "repository": "https://github.com/Sneakamaila/fiestaboard-plugin--commute",
+  "documentation": "README.md",
+  "min_refresh_seconds": 60,
+  "settings_schema": {
+    "type": "object",
+    "properties": {
+      "enabled": {
+        "type": "boolean",
+        "title": "Enabled",
+        "default": true
+      },
+      "provider": {
+        "type": "string",
+        "title": "Data Provider",
+        "description": "Select routing data provider.",
+        "enum": ["google_routes", "demo"],
+        "default": "google_routes"
+      },
+      "api_key": {
+        "type": "string",
+        "title": "Google Cloud API Key",
+        "description": "API Key with Google Routes API enabled (console.cloud.google.com).",
+        "format": "password"
+      },
+      "origin": {
+        "type": "string",
+        "title": "Default Start / Origin",
+        "description": "Default start address (e.g. 'Musterstr. 1, Berlin'). Used if Route 1 or Route 2 has no specific origin.",
+        "default": ""
+      },
+      "destination": {
+        "type": "string",
+        "title": "Default Destination",
+        "description": "Default destination address (e.g. 'Alexanderplatz 1, Berlin'). Used if Route 1 or Route 2 has no specific destination.",
+        "default": ""
+      },
+      "route1_name": {
+        "type": "string",
+        "title": "Route 1: Display Name",
+        "description": "Label for Route 1 (e.g. 'A1 Autobahn' or 'Route 1').",
+        "default": "Route 1"
+      },
+      "route1_origin": {
+        "type": "string",
+        "title": "Route 1: Origin (Optional)",
+        "description": "Specific start address for Route 1. Leave blank to use Default Start.",
+        "default": ""
+      },
+      "route1_destination": {
+        "type": "string",
+        "title": "Route 1: Destination (Optional)",
+        "description": "Specific destination address for Route 1. Leave blank to use Default Destination.",
+        "default": ""
+      },
+      "route1_via": {
+        "type": "string",
+        "title": "Route 1: Waypoint / Via",
+        "description": "Force Route 1 through this waypoint (e.g. 'A1', 'Kreuz Leverkusen', or address). Routed as a non-stop via-point.",
+        "default": ""
+      },
+      "route1_avoid_highways": {
+        "type": "boolean",
+        "title": "Route 1: Avoid Highways",
+        "description": "Avoid motorways/highways for Route 1.",
+        "default": false
+      },
+      "route1_avoid_tolls": {
+        "type": "boolean",
+        "title": "Route 1: Avoid Tolls",
+        "description": "Avoid toll roads for Route 1.",
+        "default": false
+      },
+      "route1_alternative_index": {
+        "type": "integer",
+        "title": "Route 1: Alternative Index",
+        "description": "Alternative route index to choose if no waypoint is specified (0 = primary route, 1 = alternative 1).",
+        "default": 0,
+        "minimum": 0,
+        "maximum": 5
+      },
+      "route2_name": {
+        "type": "string",
+        "title": "Route 2: Display Name",
+        "description": "Label for Route 2 (e.g. 'B3 Landstr.' or 'Route 2').",
+        "default": "Route 2"
+      },
+      "route2_origin": {
+        "type": "string",
+        "title": "Route 2: Origin (Optional)",
+        "description": "Specific start address for Route 2. Leave blank to use Default Start.",
+        "default": ""
+      },
+      "route2_destination": {
+        "type": "string",
+        "title": "Route 2: Destination (Optional)",
+        "description": "Specific destination address for Route 2. Leave blank to use Default Destination.",
+        "default": ""
+      },
+      "route2_via": {
+        "type": "string",
+        "title": "Route 2: Waypoint / Via",
+        "description": "Force Route 2 through this waypoint (e.g. 'B3', 'Dormagen', or address). Routed as a non-stop via-point.",
+        "default": ""
+      },
+      "route2_avoid_highways": {
+        "type": "boolean",
+        "title": "Route 2: Avoid Highways",
+        "description": "Avoid motorways/highways for Route 2.",
+        "default": false
+      },
+      "route2_avoid_tolls": {
+        "type": "boolean",
+        "title": "Route 2: Avoid Tolls",
+        "description": "Avoid toll roads for Route 2.",
+        "default": false
+      },
+      "route2_alternative_index": {
+        "type": "integer",
+        "title": "Route 2: Alternative Index",
+        "description": "Alternative route index to choose if no waypoint is specified (0 = primary, 1 = alternative 1).",
+        "default": 1,
+        "minimum": 0,
+        "maximum": 5
+      },
+      "unit_system": {
+        "type": "string",
+        "title": "Unit System",
+        "description": "Choose between metric (km) and imperial (miles).",
+        "enum": ["metric", "imperial"],
+        "default": "metric"
+      },
+      "traffic_model": {
+        "type": "string",
+        "title": "Traffic Prediction Model",
+        "description": "Traffic model used by Google Routes API.",
+        "enum": ["best_guess", "pessimistic", "optimistic"],
+        "default": "best_guess"
+      },
+      "delay_threshold_mins": {
+        "type": "integer",
+        "title": "Moderate Delay Threshold (Minutes)",
+        "description": "Delay in minutes before traffic is marked yellow/moderate (default: 5).",
+        "default": 5,
+        "minimum": 1
+      },
+      "heavy_delay_threshold_mins": {
+        "type": "integer",
+        "title": "Heavy Delay Threshold (Minutes)",
+        "description": "Delay in minutes before traffic is marked red/heavy (default: 15).",
+        "default": 15,
+        "minimum": 2
+      },
+      "refresh_seconds": {
+        "type": "integer",
+        "title": "Refresh Interval (seconds)",
+        "description": "How often to poll travel telemetry. Minimum 60 seconds (default: 300).",
+        "default": 300,
+        "minimum": 60
+      },
+      "demo_mode": {
+        "type": "boolean",
+        "title": "Demo Mode",
+        "description": "Simulate live commute telemetry without needing Google Cloud credentials.",
+        "default": false
+      }
+    },
+    "required": []
+  },
+  "variables": {
+    "groups": {
+      "route1": {
+        "label": "Route 1 Telemetry"
+      },
+      "route2": {
+        "label": "Route 2 Telemetry"
+      },
+      "comparison": {
+        "label": "Route Comparison & Recommendation"
+      },
+      "system": {
+        "label": "System & Timestamp"
+      }
+    },
+    "simple": {
+      "route1_name": {
+        "description": "Display name of Route 1",
+        "type": "string",
+        "max_length": 22,
+        "group": "route1",
+        "example": "A1 Autobahn"
+      },
+      "route1_duration": {
+        "description": "Travel time for Route 1 in current traffic (e.g. 34m)",
+        "type": "string",
+        "max_length": 8,
+        "group": "route1",
+        "example": "34m"
+      },
+      "route1_duration_mins": {
+        "description": "Travel time for Route 1 as integer minutes",
+        "type": "integer",
+        "max_length": 4,
+        "group": "route1",
+        "example": "34"
+      },
+      "route1_static_duration": {
+        "description": "Typical travel time for Route 1 without traffic delay",
+        "type": "string",
+        "max_length": 8,
+        "group": "route1",
+        "example": "22m"
+      },
+      "route1_delay": {
+        "description": "Traffic delay for Route 1 (e.g. +12m or 0m)",
+        "type": "string",
+        "max_length": 8,
+        "group": "route1",
+        "example": "+12m"
+      },
+      "route1_delay_mins": {
+        "description": "Traffic delay for Route 1 as integer minutes",
+        "type": "integer",
+        "max_length": 4,
+        "group": "route1",
+        "example": "12"
+      },
+      "route1_distance": {
+        "description": "Distance for Route 1 with unit",
+        "type": "string",
+        "max_length": 10,
+        "group": "route1",
+        "example": "32.4 km"
+      },
+      "route1_summary": {
+        "description": "Road summary for Route 1 (e.g. via A1)",
+        "type": "string",
+        "max_length": 22,
+        "group": "route1",
+        "example": "via A1"
+      },
+      "route1_badge": {
+        "description": "Traffic status color tile for Route 1 ({66}=green, {65}=yellow, {63}=red)",
+        "type": "string",
+        "max_length": 6,
+        "group": "route1",
+        "example": "{63}"
+      },
+      "route1_status": {
+        "description": "Traffic condition status text for Route 1 (CLEAR, MODERATE, HEAVY)",
+        "type": "string",
+        "max_length": 10,
+        "group": "route1",
+        "example": "HEAVY"
+      },
+      "route2_name": {
+        "description": "Display name of Route 2",
+        "type": "string",
+        "max_length": 22,
+        "group": "route2",
+        "example": "B3 Landstr."
+      },
+      "route2_duration": {
+        "description": "Travel time for Route 2 in current traffic (e.g. 28m)",
+        "type": "string",
+        "max_length": 8,
+        "group": "route2",
+        "example": "28m"
+      },
+      "route2_duration_mins": {
+        "description": "Travel time for Route 2 as integer minutes",
+        "type": "integer",
+        "max_length": 4,
+        "group": "route2",
+        "example": "28"
+      },
+      "route2_static_duration": {
+        "description": "Typical travel time for Route 2 without traffic delay",
+        "type": "string",
+        "max_length": 8,
+        "group": "route2",
+        "example": "27m"
+      },
+      "route2_delay": {
+        "description": "Traffic delay for Route 2 (e.g. +1m or 0m)",
+        "type": "string",
+        "max_length": 8,
+        "group": "route2",
+        "example": "+1m"
+      },
+      "route2_delay_mins": {
+        "description": "Traffic delay for Route 2 as integer minutes",
+        "type": "integer",
+        "max_length": 4,
+        "group": "route2",
+        "example": "1"
+      },
+      "route2_distance": {
+        "description": "Distance for Route 2 with unit",
+        "type": "string",
+        "max_length": 10,
+        "group": "route2",
+        "example": "26.1 km"
+      },
+      "route2_summary": {
+        "description": "Road summary for Route 2 (e.g. via B3)",
+        "type": "string",
+        "max_length": 22,
+        "group": "route2",
+        "example": "via B3"
+      },
+      "route2_badge": {
+        "description": "Traffic status color tile for Route 2 ({66}=green, {65}=yellow, {63}=red)",
+        "type": "string",
+        "max_length": 6,
+        "group": "route2",
+        "example": "{66}"
+      },
+      "route2_status": {
+        "description": "Traffic condition status text for Route 2 (CLEAR, MODERATE, HEAVY)",
+        "type": "string",
+        "max_length": 10,
+        "group": "route2",
+        "example": "CLEAR"
+      },
+      "faster_route": {
+        "description": "Identifier of faster route (Route 1, Route 2, or EQUAL)",
+        "type": "string",
+        "max_length": 10,
+        "group": "comparison",
+        "example": "Route 2"
+      },
+      "faster_route_name": {
+        "description": "Display name of faster route",
+        "type": "string",
+        "max_length": 22,
+        "group": "comparison",
+        "example": "B3 Landstr."
+      },
+      "time_diff": {
+        "description": "Time difference between both routes (e.g. 6m)",
+        "type": "string",
+        "max_length": 8,
+        "group": "comparison",
+        "example": "6m"
+      },
+      "time_diff_mins": {
+        "description": "Time difference between both routes in integer minutes",
+        "type": "integer",
+        "max_length": 4,
+        "group": "comparison",
+        "example": "6"
+      },
+      "recommendation": {
+        "description": "Short actionable recommendation (e.g. TAKE B3 (-6M))",
+        "type": "string",
+        "max_length": 22,
+        "group": "comparison",
+        "example": "TAKE B3 (-6M)"
+      },
+      "recommendation_badge": {
+        "description": "Recommendation status color tile ({66}=saving, {70}=equal)",
+        "type": "string",
+        "max_length": 6,
+        "group": "comparison",
+        "example": "{66}"
+      },
+      "last_updated": {
+        "description": "Timestamp of last route update (HH:MM)",
+        "type": "string",
+        "max_length": 8,
+        "group": "system",
+        "example": "07:45"
+      }
+    }
+  },
+  "teaser": "A1:34M B3:28M",
+  "previews": [
+    {
+      "device_type": "flagship",
+      "rows": [
+        "COMMUTE: HOME TO WORK",
+        "A1 AUTOBAHN:  34M {63}",
+        "B3 LANDSTR:   28M {66}",
+        "REC: TAKE B3 (-6 MIN)",
+        "A1 DELAY: +12 MIN     ",
+        "UPDATED: 07:45        "
+      ]
+    },
+    {
+      "device_type": "note",
+      "rows": [
+        "A1: 34M {63} +12M",
+        "B3: 28M {66} FAST",
+        "TAKE B3 (-6M)"
+      ]
+    }
+  ],
+  "api_docs": "https://developers.google.com/maps/documentation/routes",
+  "demo": {
+    "flagship": {
+      "name": "Smart Commute",
+      "config": {
+        "enabled": true,
+        "refresh_seconds": 300,
+        "demo_mode": true
+      },
+      "template": [
+        "COMMUTE: HOME TO WORK",
+        "{{commute.route1_name}}: {{commute.route1_duration}} {{commute.route1_badge}}",
+        "{{commute.route2_name}}: {{commute.route2_duration}} {{commute.route2_badge}}",
+        "{{commute.recommendation}}",
+        "DELAY: {{commute.route1_delay}} / {{commute.route2_delay}}",
+        "UPDATED: {{commute.last_updated}}"
+      ],
+      "line_metadata": [
+        { "alignment": "left", "wrap": false },
+        { "alignment": "left", "wrap": false },
+        { "alignment": "left", "wrap": false },
+        { "alignment": "left", "wrap": false },
+        { "alignment": "left", "wrap": false },
+        { "alignment": "left", "wrap": false }
+      ]
+    },
+    "note": {
+      "name": "Smart Commute (Note)",
+      "template": [
+        "{{commute.route1_name}}: {{commute.route1_duration}} {{commute.route1_badge}}",
+        "{{commute.route2_name}}: {{commute.route2_duration}} {{commute.route2_badge}}",
+        "{{commute.recommendation}}"
+      ],
+      "line_metadata": [
+        { "alignment": "left", "wrap": false },
+        { "alignment": "left", "wrap": false },
+        { "alignment": "left", "wrap": false }
+      ]
+    }
+  }
+}
