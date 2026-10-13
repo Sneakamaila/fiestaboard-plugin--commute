@@ -24,13 +24,22 @@ def test_validate_config(manifest_dict):
     # Valid config with demo_mode (no api key or addresses needed)
     assert plugin.validate_config({"demo_mode": True}) == []
 
-    # Invalid: missing api_key when demo_mode is False
+    # Invalid: missing api_key when demo_mode is False (TomTom default)
     errors = plugin.validate_config({
         "demo_mode": False,
         "origin": "Home",
         "destination": "Work",
     })
-    assert any("Google Cloud API Key is required" in err for err in errors)
+    assert any("TomTom API Key is required" in err for err in errors)
+
+    # Invalid: missing api_key when provider is google_routes
+    errors_google = plugin.validate_config({
+        "provider": "google_routes",
+        "demo_mode": False,
+        "origin": "Home",
+        "destination": "Work",
+    })
+    assert any("Google Cloud API Key is required" in err for err in errors_google)
 
     # Invalid: missing origin and destination
     errors = plugin.validate_config({"api_key": "token_123"})

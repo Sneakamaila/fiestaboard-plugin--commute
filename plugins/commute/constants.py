@@ -35,3 +35,7 @@ ROUTES_FIELD_MASK = (
     "routes.description,"
     "routes.warnings"
 )
+
+# TomTom Routing & Search API (100% Free Tier - 2,500 daily requests, no credit card)
+TOMTOM_ROUTING_API_BASE = "https://api.tomtom.com/routing/1/calculateRoute"
+TOMTOM_GEOCODE_API_BASE = "https://api.tomtom.com/search/2/geocode"

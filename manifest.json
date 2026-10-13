@@ -20,14 +20,14 @@
       "provider": {
         "type": "string",
         "title": "Data Provider",
-        "description": "Select routing data provider.",
-        "enum": ["google_routes", "demo"],
-        "default": "google_routes"
+        "description": "Select routing data provider. TomTom is 100% free with 2,500 daily requests and no credit card required.",
+        "enum": ["tomtom", "google_routes", "demo"],
+        "default": "tomtom"
       },
       "api_key": {
         "type": "string",
-        "title": "Google Cloud API Key",
-        "description": "API Key with Google Routes API enabled (console.cloud.google.com).",
+        "title": "API Key (TomTom / Google)",
+        "description": "API Key from developer.tomtom.com (Free, no credit card) or Google Cloud Routes API.",
         "format": "password"
       },
       "origin": {

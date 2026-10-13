@@ -73,6 +73,7 @@ from .providers import (
     DemoProvider,
     GoogleRoutesProvider,
     ProviderError,
+    TomTomProvider,
 )
 
 logger = logging.getLogger(__name__)
@@ -87,15 +88,20 @@ class CommutePlugin(PluginBase):
 
     def _get_provider(self, cfg: Dict[str, Any]) -> BaseCommuteProvider:
         """Instantiate the appropriate routing telemetry provider."""
-        provider_name = (cfg.get("provider") or "").lower().strip()
+        provider_name = (cfg.get("provider") or "tomtom").lower().strip()
         demo_mode = bool(cfg.get("demo_mode", False))
 
         if demo_mode or provider_name == "demo":
             return DemoProvider()
 
         api_key = str(cfg.get("api_key") or "").strip()
-        traffic_model = str(cfg.get("traffic_model") or "best_guess").strip()
-        return GoogleRoutesProvider(api_key=api_key, traffic_model=traffic_model)
+
+        if provider_name == "google_routes":
+            traffic_model = str(cfg.get("traffic_model") or "best_guess").strip()
+            return GoogleRoutesProvider(api_key=api_key, traffic_model=traffic_model)
+
+        # Default provider is TomTom (100% free, 2,500 calls/day, no credit card needed)
+        return TomTomProvider(api_key=api_key)
 
     def _build_route_requests(self, cfg: Dict[str, Any]) -> tuple[RouteRequest, RouteRequest]:
         """Resolve route requests incorporating fallbacks and route-specific parameters."""
@@ -282,7 +288,10 @@ class CommutePlugin(PluginBase):
             # API Key check
             api_key = (config.get("api_key") or "").strip()
             if not api_key:
-                errors.append("Google Cloud API Key is required unless Demo Mode is enabled.")
+                if provider == "google_routes":
+                    errors.append("Google Cloud API Key is required when using Google Routes unless Demo Mode is enabled.")
+                else:
+                    errors.append("TomTom API Key is required unless Demo Mode is enabled.")
 
             # Address checks
             default_orig = (config.get("origin") or "").strip()
