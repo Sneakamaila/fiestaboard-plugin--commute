@@ -93,6 +93,16 @@ class TomTomProvider(BaseCommuteProvider):
         pos = results[0].get("position", {})
         lat = pos.get("lat")
         lon = pos.get("lon")
+
+        # Prefer road entryPoints if available (navigates to vehicle entrance rather than parcel centroid)
+        entry_points = results[0].get("entryPoints") or []
+        for ep in entry_points:
+            ep_pos = ep.get("position", {})
+            if ep_pos.get("lat") is not None and ep_pos.get("lon") is not None:
+                lat = ep_pos["lat"]
+                lon = ep_pos["lon"]
+                break
+
         if lat is None or lon is None:
             raise ProviderError(f"Invalid position returned for address '{clean}' from TomTom.")
 
@@ -134,7 +144,9 @@ class TomTomProvider(BaseCommuteProvider):
             "key": self.api_key,
             "traffic": "true",
             "travelMode": "car",
+            "routeType": "fastest",
             "departAt": "now",
+            "computeTravelTimeFor": "all",
         }
 
         if request.alternative_index > 0:
