@@ -157,6 +157,11 @@ def test_tomtom_get_route_alternative_selection():
     )
 
     result = provider.get_route(req)
+    call = responses.calls[0]
+    assert call.request.params["alternativeType"] == "anyRoute"
+    assert call.request.params["maxAlternatives"] == "1"
+    assert call.request.params["departAt"] == "now"
+
     assert result.duration_seconds == 1620
     assert result.duration_minutes == 27
     assert result.distance_meters == 27000

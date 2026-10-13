@@ -115,9 +115,12 @@ class TomTomProvider(BaseCommuteProvider):
             "key": self.api_key,
             "traffic": "true",
             "travelMode": "car",
-            "computeBestAlternativeBy": "anyRoute",
-            "maxAlternatives": 2,
+            "departAt": "now",
         }
+
+        if request.alternative_index > 0:
+            params["maxAlternatives"] = max(1, min(request.alternative_index, 5))
+            params["alternativeType"] = "anyRoute"
 
         avoid_list: List[str] = []
         if request.avoid_highways:
@@ -171,18 +174,15 @@ class TomTomProvider(BaseCommuteProvider):
 
         distance_meters = int(summary.get("lengthInMeters", 0))
 
-        # Check legs or summary description for road names
         route_summary = ""
-        legs = chosen_route.get("legs", [])
-        for leg in legs:
-            points = leg.get("points", [])
-            if points:
-                pass
-        if not route_summary:
-            if target_idx > 0:
-                route_summary = f"Alt Route {target_idx}"
-            else:
-                route_summary = "Main Route"
+        if request.via and request.via.strip():
+            route_summary = f"via {request.via.strip()}"
+        elif request.avoid_highways:
+            route_summary = "via Landstr./Lokal"
+        elif target_idx > 0:
+            route_summary = f"Alt Route {target_idx}"
+        else:
+            route_summary = "Main Route"
 
         return RouteTelemetry(
             name=request.name,
