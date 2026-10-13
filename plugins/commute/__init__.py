@@ -101,7 +101,8 @@ class CommutePlugin(PluginBase):
             return GoogleRoutesProvider(api_key=api_key, traffic_model=traffic_model)
 
         # Default provider is TomTom (100% free, 2,500 calls/day, no credit card needed)
-        return TomTomProvider(api_key=api_key)
+        country_set = str(cfg.get("country_code") or "DE").strip()
+        return TomTomProvider(api_key=api_key, country_set=country_set)
 
     def _build_route_requests(self, cfg: Dict[str, Any]) -> tuple[RouteRequest, RouteRequest]:
         """Resolve route requests incorporating fallbacks and route-specific parameters."""

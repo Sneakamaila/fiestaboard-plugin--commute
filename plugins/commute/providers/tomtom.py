@@ -30,18 +30,20 @@ class TomTomProvider(BaseCommuteProvider):
     def __init__(
         self,
         api_key: str,
+        country_set: str = "DE",
         timeout_seconds: int = 15,
         session: requests.Session | None = None,
     ) -> None:
         if not api_key or not api_key.strip():
             raise ProviderError("TomTom API Key is required for TomTom provider.")
         self.api_key = api_key.strip()
+        self.country_set = (country_set or "").strip().upper()
         self.timeout_seconds = timeout_seconds
         self._session = session or requests.Session()
         # In-memory cache so addresses are only geocoded once across plugin poll cycles
         self._geocode_cache: Dict[str, str] = {}
 
-    def geocode(self, location: str) -> str:
+    def geocode(self, location: str, bias_coords: tuple[float, float] | None = None) -> str:
         """Resolve an address or coordinate string into 'latitude,longitude' format."""
         clean = (location or "").strip()
         if not clean:
@@ -53,17 +55,22 @@ class TomTomProvider(BaseCommuteProvider):
             lat, lon = coord_match.group(1), coord_match.group(2)
             return f"{lat},{lon}"
 
-        # Check in-memory cache
-        if clean in self._geocode_cache:
-            return self._geocode_cache[clean]
+        cache_key = f"{clean}|{self.country_set}"
+        if cache_key in self._geocode_cache:
+            return self._geocode_cache[cache_key]
 
         # Call TomTom Search/Geocode API
         encoded_query = urllib.parse.quote(clean)
         url = f"{TOMTOM_GEOCODE_API_BASE}/{encoded_query}.json"
-        params = {
+        params: Dict[str, Any] = {
             "key": self.api_key,
             "limit": 1,
         }
+        if self.country_set:
+            params["countrySet"] = self.country_set
+        if bias_coords:
+            params["lat"] = bias_coords[0]
+            params["lon"] = bias_coords[1]
 
         try:
             resp = self._session.get(url, params=params, timeout=self.timeout_seconds)
@@ -80,7 +87,8 @@ class TomTomProvider(BaseCommuteProvider):
 
         results = data.get("results", [])
         if not results:
-            raise ProviderError(f"Could not find coordinates for address '{clean}' with TomTom.")
+            country_hint = f" within country '{self.country_set}'" if self.country_set else ""
+            raise ProviderError(f"Could not find coordinates for address '{clean}'{country_hint} with TomTom.")
 
         pos = results[0].get("position", {})
         lat = pos.get("lat")
@@ -88,8 +96,12 @@ class TomTomProvider(BaseCommuteProvider):
         if lat is None or lon is None:
             raise ProviderError(f"Invalid position returned for address '{clean}' from TomTom.")
 
+        addr = results[0].get("address", {})
+        freeform = addr.get("freeformAddress", clean)
+        logger.info("TomTom geocoded '%s' -> %s,%s (%s)", clean, lat, lon, freeform)
+
         coord_str = f"{lat},{lon}"
-        self._geocode_cache[clean] = coord_str
+        self._geocode_cache[cache_key] = coord_str
         return coord_str
 
     def get_route(self, request: RouteRequest) -> RouteTelemetry:
@@ -100,11 +112,18 @@ class TomTomProvider(BaseCommuteProvider):
             raise ProviderError(f"Route '{request.name}' has no destination address configured.")
 
         orig_coords = self.geocode(request.origin)
-        dest_coords = self.geocode(request.destination)
+        orig_bias: tuple[float, float] | None = None
+        try:
+            parts = orig_coords.split(",")
+            orig_bias = (float(parts[0]), float(parts[1]))
+        except Exception:
+            pass
+
+        dest_coords = self.geocode(request.destination, bias_coords=orig_bias)
 
         # Assemble location path, including non-stop via point if specified
         if request.via and request.via.strip():
-            via_coords = self.geocode(request.via)
+            via_coords = self.geocode(request.via, bias_coords=orig_bias)
             locations_path = f"{orig_coords}:{via_coords}:{dest_coords}"
         else:
             locations_path = f"{orig_coords}:{dest_coords}"
@@ -145,6 +164,14 @@ class TomTomProvider(BaseCommuteProvider):
                     error_msg = err_data["detailedError"].get("message") or str(err_data["detailedError"])
             except Exception:
                 error_msg = resp.text or error_msg
+
+            if "different ProductId" in error_msg:
+                error_msg += (
+                    f" (Hinweis: Start '{request.origin}' und Ziel/Zwischenstopp '{request.via or request.destination}' "
+                    "wurden in unterschiedlichen Ländern/Kontinenten gefunden. "
+                    "Bitte Stadt oder Land beim Wegpunkt angeben, z. B. 'A1, Dortmund')."
+                )
+
             raise ProviderError(f"TomTom Routing API error: {error_msg}")
 
         try:

@@ -45,6 +45,7 @@ def test_tomtom_geocode_address_and_caching():
     coords = provider.geocode("Alexanderplatz, Berlin")
     assert coords == "52.52,13.405"
     assert len(responses.calls) == 1
+    assert responses.calls[0].request.params["countrySet"] == "DE"
 
     # Second call uses in-memory cache, no new HTTP request
     coords2 = provider.geocode("Alexanderplatz, Berlin")

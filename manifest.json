@@ -30,6 +30,12 @@
         "description": "API Key from developer.tomtom.com (Free, no credit card) or Google Cloud Routes API.",
         "format": "password"
       },
+      "country_code": {
+        "type": "string",
+        "title": "Country Code Filter",
+        "description": "ISO 2-letter country code (e.g. 'DE', 'AT', 'CH') to restrict address lookups so waypoints stay local.",
+        "default": "DE"
+      },
       "origin": {
         "type": "string",
         "title": "Default Start / Origin",
