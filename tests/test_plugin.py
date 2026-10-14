@@ -41,9 +41,9 @@ def test_validate_config(manifest_dict):
     })
     assert any("Google Cloud API Key is required" in err for err in errors_google)
 
-    # Invalid: missing origin and destination (and no Google Maps link)
+    # Invalid: missing origin and destination (and no GPX / Google Maps link)
     errors = plugin.validate_config({"api_key": "token_123"})
-    assert any("requires either a Google Maps Link" in err for err in errors)
+    assert any("requires either a GPX file, Google Maps Link" in err for err in errors)
 
     # Valid: using Google Maps links instead of manual addresses
     maps_cfg = {
@@ -52,6 +52,14 @@ def test_validate_config(manifest_dict):
         "route2_maps_url": "https://maps.app.goo.gl/route2",
     }
     assert plugin.validate_config(maps_cfg) == []
+
+    # Valid: using GPX files
+    gpx_cfg = {
+        "api_key": "token_123",
+        "route1_gpx_path": "tests/fixtures/sample_route.gpx",
+        "route2_gpx_path": "tests/fixtures/sample_route.gpx",
+    }
+    assert plugin.validate_config(gpx_cfg) == []
 
 
     # Invalid: refresh_seconds too low

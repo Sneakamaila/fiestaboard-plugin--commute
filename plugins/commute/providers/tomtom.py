@@ -13,6 +13,7 @@ from ..constants import (
     TOMTOM_ROUTING_API_BASE,
 )
 from ..google_maps_parser import is_google_maps_url, resolve_google_maps_route
+from ..gpx_parser import is_gpx_path, parse_gpx_file
 from ..models import RouteRequest, RouteTelemetry
 from .base import BaseCommuteProvider, ProviderError
 
@@ -117,13 +118,41 @@ class TomTomProvider(BaseCommuteProvider):
 
     def get_route(self, request: RouteRequest) -> RouteTelemetry:
         """Fetch routing telemetry for a single route request using TomTom calculateRoute."""
-        # Check if request specifies a Google Maps URL
+        # 1. Check if request specifies a GPX file
+        gpx_path = (request.gpx_path or "").strip()
+        if not gpx_path and is_gpx_path(request.origin):
+            gpx_path = request.origin.strip()
+
+        # 2. Check if request specifies a Google Maps URL
         maps_link = (request.maps_url or "").strip()
-        if not maps_link and is_google_maps_url(request.origin):
+        if not maps_link and not gpx_path and is_google_maps_url(request.origin):
             maps_link = request.origin.strip()
 
         via_summary = ""
-        if maps_link:
+        supporting_points: List[Dict[str, float]] = []
+        fallback_stops: List[str] = []
+
+        if gpx_path:
+            try:
+                resolved_gpx = parse_gpx_file(gpx_path)
+            except Exception as e:
+                raise ProviderError(f"Could not load or parse GPX file '{gpx_path}': {e}") from e
+
+            orig_coords = resolved_gpx.origin_coords
+            dest_coords = resolved_gpx.destination_coords
+            fallback_stops = [orig_coords]
+            if resolved_gpx.via_coords:
+                fallback_stops.extend(resolved_gpx.via_coords)
+            fallback_stops.append(dest_coords)
+
+            if resolved_gpx.supporting_points:
+                supporting_points = resolved_gpx.supporting_points
+                locations_path = f"{orig_coords}:{dest_coords}"
+                via_summary = f"via GPX ({resolved_gpx.name or 'Track'})"
+            else:
+                locations_path = ":".join(fallback_stops)
+                via_summary = f"via GPX ({resolved_gpx.name or 'Route'})"
+        elif maps_link:
             try:
                 resolved = resolve_google_maps_route(
                     maps_link,
@@ -216,7 +245,19 @@ class TomTomProvider(BaseCommuteProvider):
             params["avoid"] = ",".join(avoid_list)
 
         try:
-            resp = self._session.get(url, params=params, timeout=self.timeout_seconds)
+            if supporting_points:
+                # Use HTTP POST with supportingPoints for route reconstruction
+                payload = {"supportingPoints": supporting_points}
+                resp = self._session.post(url, params=params, json=payload, timeout=self.timeout_seconds)
+                # If POST fails with a client error, attempt fallback to GET with waypoints
+                if not resp.ok and fallback_stops:
+                    fallback_path = ":".join(fallback_stops)
+                    fallback_url = f"{TOMTOM_ROUTING_API_BASE}/{fallback_path}/json"
+                    fallback_resp = self._session.get(fallback_url, params=params, timeout=self.timeout_seconds)
+                    if fallback_resp.ok:
+                        resp = fallback_resp
+            else:
+                resp = self._session.get(url, params=params, timeout=self.timeout_seconds)
         except requests.RequestException as e:
             raise ProviderError(f"Network error querying TomTom Routing API: {e}") from e
 

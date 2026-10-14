@@ -54,9 +54,15 @@
         "description": "Label for Route 1 (e.g. 'A1 Autobahn' or 'Route 1').",
         "default": "Route 1"
       },
+      "route1_gpx_path": {
+        "type": "string",
+        "title": "Route 1: GPX Datei",
+        "description": "Pfad zu einer GPX-Datei (z. B. 'routes/route1.gpx'). TomTom rekonstruiert exakt den aufgezeichneten Streckenverlauf mit Live-Verkehr!",
+        "default": ""
+      },
       "route1_maps_url": {
         "type": "string",
-        "title": "Route 1: Google Maps Link (Empfohlen)",
+        "title": "Route 1: Google Maps Link",
         "description": "Freigabelink aus Google Maps (z. B. https://maps.app.goo.gl/...). Übernimmt Start, Ziel und per Drag-and-Drop gezogene Wegpunkte exakt!",
         "default": ""
       },
@@ -104,9 +110,15 @@
         "description": "Label for Route 2 (e.g. 'B3 Landstr.' or 'Route 2').",
         "default": "Route 2"
       },
+      "route2_gpx_path": {
+        "type": "string",
+        "title": "Route 2: GPX Datei",
+        "description": "Pfad zu einer GPX-Datei (z. B. 'routes/route2.gpx'). TomTom rekonstruiert exakt den aufgezeichneten Streckenverlauf mit Live-Verkehr!",
+        "default": ""
+      },
       "route2_maps_url": {
         "type": "string",
-        "title": "Route 2: Google Maps Link (Empfohlen)",
+        "title": "Route 2: Google Maps Link",
         "description": "Freigabelink aus Google Maps (z. B. https://maps.app.goo.gl/...). Übernimmt Start, Ziel und per Drag-and-Drop gezogene Wegpunkte exakt!",
         "default": ""
       },

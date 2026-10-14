@@ -223,3 +223,37 @@ def test_google_routes_with_google_maps_url():
     assert "intermediates" not in payload
 
 
+@responses.activate
+def test_google_routes_with_gpx():
+    provider = GoogleRoutesProvider(api_key="test_gmp_key")
+
+    mock_response = {
+        "routes": [
+            {
+                "duration": "1080s",
+                "staticDuration": "960s",
+                "distanceMeters": 14280,
+                "description": "A1",
+            }
+        ]
+    }
+
+    responses.add(
+        responses.POST,
+        GOOGLE_ROUTES_API_URL,
+        json=mock_response,
+        status=200,
+    )
+
+    req = RouteRequest(name="GPX Route", origin="", destination="", gpx_path="tests/fixtures/sample_route.gpx")
+    result = provider.get_route(req)
+
+    assert result.duration_minutes == 18
+    post_call = [c for c in responses.calls if c.request.method == "POST"][0]
+    payload = json.loads(post_call.request.body)
+    assert payload["origin"]["location"]["latLng"]["latitude"] == 52.52
+    assert payload["destination"]["location"]["latLng"]["latitude"] == 52.5
+    assert len(payload["intermediates"]) == 1
+    assert payload["intermediates"][0]["location"]["latLng"]["latitude"] == 52.51
+
+

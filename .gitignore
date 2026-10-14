@@ -25,3 +25,8 @@ htmlcov/
 .venv/
 venv/
 .env
+
+# User data & private route files
+*.gpx
+!tests/fixtures/*.gpx
+routes/

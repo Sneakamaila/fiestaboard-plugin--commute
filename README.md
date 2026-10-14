@@ -94,9 +94,10 @@ In the FiestaBoard Web UI under **Integrations > Smart Commute**, configure your
 | Setting | Type | Default | Description |
 |---|---|---|---|
 | `route1_name` | string | `"Route 1"` | Display name (e.g. `A1 Autobahn`) |
-| `route1_maps_url` | string | `""` | **Google Maps Link (Recommended)**: Share link (`https://maps.app.goo.gl/...`). Start, destination, and dragged waypoints are automatically extracted! |
-| `route1_origin` | string | `""` | Specific start address (leave empty to use default or if using Maps Link) |
-| `route1_destination` | string | `""` | Specific destination address (leave empty to use default or if using Maps Link) |
+| `route1_gpx_path` | string | `""` | **GPX Route File**: Relative path (e.g. `routes/route1.gpx`) or absolute path to a GPX track. Reconstructs exact road geometry! |
+| `route1_maps_url` | string | `""` | **Google Maps Link**: Share link (`https://maps.app.goo.gl/...`). Start, destination, and dragged waypoints are automatically extracted! |
+| `route1_origin` | string | `""` | Specific start address (leave empty to use default or if using Maps Link/GPX) |
+| `route1_destination` | string | `""` | Specific destination address (leave empty to use default or if using Maps Link/GPX) |
 | `route1_via` | string | `""` | Optional waypoint corridor (e.g. `A1` or `Kreuz Hilden`) |
 | `route1_avoid_highways`| boolean | `false` | Avoid highways for Route 1 |
 | `route1_avoid_tolls` | boolean | `false` | Avoid tolls for Route 1 |
@@ -107,9 +108,10 @@ In the FiestaBoard Web UI under **Integrations > Smart Commute**, configure your
 | Setting | Type | Default | Description |
 |---|---|---|---|
 | `route2_name` | string | `"Route 2"` | Display name (e.g. `B3 Landstr.`) |
-| `route2_maps_url` | string | `""` | **Google Maps Link (Recommended)**: Share link (`https://maps.app.goo.gl/...`). Start, destination, and dragged waypoints are automatically extracted! |
-| `route2_origin` | string | `""` | Specific start address (leave empty to use default or if using Maps Link) |
-| `route2_destination` | string | `""` | Specific destination address (leave empty to use default or if using Maps Link) |
+| `route2_gpx_path` | string | `""` | **GPX Route File**: Relative path (e.g. `routes/route2.gpx`) or absolute path to a GPX track. Reconstructs exact road geometry! |
+| `route2_maps_url` | string | `""` | **Google Maps Link**: Share link (`https://maps.app.goo.gl/...`). Start, destination, and dragged waypoints are automatically extracted! |
+| `route2_origin` | string | `""` | Specific start address (leave empty to use default or if using Maps Link/GPX) |
+| `route2_destination` | string | `""` | Specific destination address (leave empty to use default or if using Maps Link/GPX) |
 | `route2_via` | string | `""` | Optional waypoint corridor (e.g. `B3` or `Dormagen`) |
 | `route2_avoid_highways`| boolean | `false` | Avoid highways for Route 2 (forces local roads) |
 | `route2_avoid_tolls` | boolean | `false` | Avoid tolls for Route 2 |

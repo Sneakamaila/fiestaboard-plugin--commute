@@ -285,3 +285,90 @@ def test_tomtom_get_route_with_real_intermediate_stops():
     assert result.summary == "via G-Maps Path"
 
 
+@responses.activate
+def test_tomtom_get_route_with_gpx_supporting_points():
+    provider = TomTomProvider(api_key="test_key")
+
+    mock_route_resp = {
+        "routes": [
+            {
+                "summary": {
+                    "lengthInMeters": 5200,
+                    "travelTimeInSeconds": 600,
+                    "trafficDelayInSeconds": 60,
+                    "noTrafficTravelTimeInSeconds": 540,
+                }
+            }
+        ]
+    }
+
+    # Sample route GPX has origin 52.5200,13.4050 and destination 52.5000,13.3000
+    expected_url = f"{TOMTOM_ROUTING_API_BASE}/52.5200,13.4050:52.5000,13.3000/json"
+    responses.add(
+        responses.POST,
+        expected_url,
+        json=mock_route_resp,
+        status=200,
+    )
+
+    req = RouteRequest(
+        name="Route 1 via GPX",
+        origin="",
+        destination="",
+        gpx_path="tests/fixtures/sample_route.gpx",
+    )
+
+    result = provider.get_route(req)
+    assert result.name == "Route 1 via GPX"
+    assert result.duration_minutes == 10
+    assert result.delay_minutes == 1
+    assert result.distance_meters == 5200
+    assert "GPX" in result.summary
+
+
+@responses.activate
+def test_tomtom_get_route_with_gpx_post_fallback_to_get():
+    provider = TomTomProvider(api_key="test_key")
+
+    mock_route_resp = {
+        "routes": [
+            {
+                "summary": {
+                    "lengthInMeters": 5300,
+                    "travelTimeInSeconds": 620,
+                    "trafficDelayInSeconds": 0,
+                    "noTrafficTravelTimeInSeconds": 620,
+                }
+            }
+        ]
+    }
+
+    post_url = f"{TOMTOM_ROUTING_API_BASE}/52.5200,13.4050:52.5000,13.3000/json"
+    responses.add(
+        responses.POST,
+        post_url,
+        status=400,
+        json={"error": "Unsupported supporting points"},
+    )
+
+    # Fallback to GET with waypoints: origin:via:destination
+    get_url = f"{TOMTOM_ROUTING_API_BASE}/52.5200,13.4050:52.5100,13.3500:52.5000,13.3000/json"
+    responses.add(
+        responses.GET,
+        get_url,
+        json=mock_route_resp,
+        status=200,
+    )
+
+    req = RouteRequest(
+        name="Fallback Route",
+        origin="",
+        destination="",
+        gpx_path="tests/fixtures/sample_route.gpx",
+    )
+
+    result = provider.get_route(req)
+    assert result.duration_minutes == 10
+    assert result.distance_meters == 5300
+
+

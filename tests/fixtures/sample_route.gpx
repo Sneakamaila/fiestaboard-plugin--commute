@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<gpx xmlns="http://www.topografix.com/GPX/1/1" version="1.1" creator="Fixture">
+    <wpt lat="52.5200" lon="13.4050">
+        <type>TT_HARD</type>
+    </wpt>
+    <wpt lat="52.5100" lon="13.3500">
+        <type>TT_SOFT</type>
+    </wpt>
+    <wpt lat="52.5000" lon="13.3000">
+        <type>TT_HARD</type>
+    </wpt>
+    <rte>
+        <name>Sample Test Route</name>
+        <rtept lat="52.5200" lon="13.4050"/>
+        <rtept lat="52.5100" lon="13.3500"/>
+        <rtept lat="52.5000" lon="13.3000"/>
+    </rte>
+    <trk>
+        <name>Sample Test Route</name>
+        <trkseg>
+            <trkpt lat="52.5200" lon="13.4050"/>
+            <trkpt lat="52.5150" lon="13.3800"/>
+            <trkpt lat="52.5100" lon="13.3500"/>
+            <trkpt lat="52.5050" lon="13.3200"/>
+            <trkpt lat="52.5000" lon="13.3000"/>
+        </trkseg>
+    </trk>
+</gpx>

@@ -12,6 +12,7 @@ from ..constants import (
     ROUTES_FIELD_MASK,
 )
 from ..google_maps_parser import is_google_maps_url, resolve_google_maps_route
+from ..gpx_parser import is_gpx_path, parse_gpx_file
 from ..models import RouteRequest, RouteTelemetry
 from .base import BaseCommuteProvider, ProviderError
 
@@ -50,41 +51,66 @@ class GoogleRoutesProvider(BaseCommuteProvider):
 
     def _build_payload(self, request: RouteRequest) -> Dict[str, Any]:
         """Construct the REST request payload for computeRoutes."""
+        # 1. Check if request specifies a GPX file
+        gpx_path = (request.gpx_path or "").strip()
+        if not gpx_path and is_gpx_path(request.origin):
+            gpx_path = request.origin.strip()
+
+        # 2. Check if request specifies a Google Maps URL
         maps_link = (request.maps_url or "").strip()
-        if not maps_link and is_google_maps_url(request.origin):
+        if not maps_link and not gpx_path and is_google_maps_url(request.origin):
             maps_link = request.origin.strip()
 
-        if maps_link:
-            try:
-                resolved = resolve_google_maps_route(
-                    maps_link,
-                    timeout_seconds=self.timeout_seconds,
-                    session=self._session,
-                )
-            except Exception as e:
-                raise ProviderError(f"Could not resolve Google Maps URL: {e}") from e
-
-            if resolved.origin_coords:
-                lat, lon = [float(x) for x in resolved.origin_coords.split(",")]
-                origin_obj: Dict[str, Any] = {"location": {"latLng": {"latitude": lat, "longitude": lon}}}
-            else:
-                origin_obj = {"address": resolved.origin_address or request.origin}
-
-            if resolved.destination_coords:
-                lat, lon = [float(x) for x in resolved.destination_coords.split(",")]
-                dest_obj: Dict[str, Any] = {"location": {"latLng": {"latitude": lat, "longitude": lon}}}
-            else:
-                dest_obj = {"address": resolved.destination_address or request.destination}
-
+        if gpx_path or maps_link:
             intermediates: List[Dict[str, Any]] = []
-            for vc in resolved.via_coords:
-                vlat, vlon = [float(x) for x in vc.split(",")]
-                intermediates.append({
-                    "location": {"latLng": {"latitude": vlat, "longitude": vlon}},
-                    "via": True,
-                })
-            for va in resolved.via_addresses:
-                intermediates.append({"address": va, "via": True})
+            if gpx_path:
+                try:
+                    resolved_gpx = parse_gpx_file(gpx_path)
+                except Exception as e:
+                    raise ProviderError(f"Could not load or parse GPX file '{gpx_path}': {e}") from e
+
+                lat_o, lon_o = [float(x) for x in resolved_gpx.origin_coords.split(",")]
+                origin_obj = {"location": {"latLng": {"latitude": lat_o, "longitude": lon_o}}}
+
+                lat_d, lon_d = [float(x) for x in resolved_gpx.destination_coords.split(",")]
+                dest_obj = {"location": {"latLng": {"latitude": lat_d, "longitude": lon_d}}}
+
+                for vc in resolved_gpx.via_coords:
+                    vlat, vlon = [float(x) for x in vc.split(",")]
+                    intermediates.append({
+                        "location": {"latLng": {"latitude": vlat, "longitude": vlon}},
+                        "via": True,
+                    })
+            else:
+                try:
+                    resolved = resolve_google_maps_route(
+                        maps_link,
+                        timeout_seconds=self.timeout_seconds,
+                        session=self._session,
+                    )
+                except Exception as e:
+                    raise ProviderError(f"Could not resolve Google Maps URL: {e}") from e
+
+                if resolved.origin_coords:
+                    lat, lon = [float(x) for x in resolved.origin_coords.split(",")]
+                    origin_obj = {"location": {"latLng": {"latitude": lat, "longitude": lon}}}
+                else:
+                    origin_obj = {"address": resolved.origin_address or request.origin}
+
+                if resolved.destination_coords:
+                    lat, lon = [float(x) for x in resolved.destination_coords.split(",")]
+                    dest_obj = {"location": {"latLng": {"latitude": lat, "longitude": lon}}}
+                else:
+                    dest_obj = {"address": resolved.destination_address or request.destination}
+
+                for vc in resolved.via_coords:
+                    vlat, vlon = [float(x) for x in vc.split(",")]
+                    intermediates.append({
+                        "location": {"latLng": {"latitude": vlat, "longitude": vlon}},
+                        "via": True,
+                    })
+                for va in resolved.via_addresses:
+                    intermediates.append({"address": va, "via": True})
 
             payload: Dict[str, Any] = {
                 "origin": origin_obj,
@@ -128,11 +154,15 @@ class GoogleRoutesProvider(BaseCommuteProvider):
 
     def get_route(self, request: RouteRequest) -> RouteTelemetry:
         """Fetch routing telemetry for a single route request."""
+        gpx_path = (request.gpx_path or "").strip()
+        if not gpx_path and is_gpx_path(request.origin):
+            gpx_path = request.origin.strip()
+
         maps_link = (request.maps_url or "").strip()
-        if not maps_link and is_google_maps_url(request.origin):
+        if not maps_link and not gpx_path and is_google_maps_url(request.origin):
             maps_link = request.origin.strip()
 
-        if not maps_link:
+        if not maps_link and not gpx_path:
             if not (request.origin and request.origin.strip()):
                 raise ProviderError(f"Route '{request.name}' has no origin address configured.")
             if not (request.destination and request.destination.strip()):

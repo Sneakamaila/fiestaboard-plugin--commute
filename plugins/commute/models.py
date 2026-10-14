@@ -18,6 +18,7 @@ class RouteRequest:
     avoid_tolls: bool = False
     alternative_index: int = 0
     maps_url: str = ""
+    gpx_path: str = ""
 
 
 @dataclass
