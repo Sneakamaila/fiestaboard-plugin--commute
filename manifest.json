@@ -54,6 +54,12 @@
         "description": "Label for Route 1 (e.g. 'A1 Autobahn' or 'Route 1').",
         "default": "Route 1"
       },
+      "route1_maps_url": {
+        "type": "string",
+        "title": "Route 1: Google Maps Link (Empfohlen)",
+        "description": "Freigabelink aus Google Maps (z. B. https://maps.app.goo.gl/...). Übernimmt Start, Ziel und per Drag-and-Drop gezogene Wegpunkte exakt!",
+        "default": ""
+      },
       "route1_origin": {
         "type": "string",
         "title": "Route 1: Origin (Optional)",
@@ -97,6 +103,12 @@
         "title": "Route 2: Display Name",
         "description": "Label for Route 2 (e.g. 'B3 Landstr.' or 'Route 2').",
         "default": "Route 2"
+      },
+      "route2_maps_url": {
+        "type": "string",
+        "title": "Route 2: Google Maps Link (Empfohlen)",
+        "description": "Freigabelink aus Google Maps (z. B. https://maps.app.goo.gl/...). Übernimmt Start, Ziel und per Drag-and-Drop gezogene Wegpunkte exakt!",
+        "default": ""
       },
       "route2_origin": {
         "type": "string",

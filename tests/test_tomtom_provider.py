@@ -183,3 +183,61 @@ def test_tomtom_api_error_response():
     req = RouteRequest(name="R1", origin="52.50,13.30", destination="52.55,13.40")
     with pytest.raises(ProviderError, match="Developer Over Qps"):
         provider.get_route(req)
+
+
+@responses.activate
+def test_tomtom_get_route_with_google_maps_url():
+    provider = TomTomProvider(api_key="test_key")
+
+    shortlink = "https://maps.app.goo.gl/userRoute"
+    expanded = (
+        "https://www.google.de/maps/dir/Start/Destination/@53.5,10.1,14z/am=t/data="
+        "!3m2!1e3!4b1!4m19!4m18!1m10!2m2!1d13.4050!2d52.5200!3m4!1m2!1d13.3501!2d52.5145!1m5!2m2!1d13.3759!2d52.5096!3e0"
+    )
+
+    # 1. Mock shortlink 302 redirect
+    responses.add(
+        responses.GET,
+        shortlink,
+        status=302,
+        headers={"Location": expanded},
+    )
+
+    # 2. Mock TomTom Routing API with exact coordinate chain
+    mock_route_resp = {
+        "routes": [
+            {
+                "summary": {
+                    "lengthInMeters": 14200,
+                    "travelTimeInSeconds": 1020,  # 17 mins
+                    "trafficDelayInSeconds": 60,
+                    "noTrafficTravelTimeInSeconds": 960,  # 16 mins
+                }
+            }
+        ]
+    }
+
+    expected_tomtom_url = f"{TOMTOM_ROUTING_API_BASE}/52.52,13.405:52.5145,13.3501:52.5096,13.3759/json"
+    responses.add(
+        responses.GET,
+        expected_tomtom_url,
+        json=mock_route_resp,
+        status=200,
+    )
+
+    req = RouteRequest(
+        name="B5 via Google Link",
+        origin="",
+        destination="",
+        maps_url=shortlink,
+    )
+
+    result = provider.get_route(req)
+
+    assert result.name == "B5 via Google Link"
+    assert result.duration_minutes == 17
+    assert result.static_duration_minutes == 16
+    assert result.delay_minutes == 1
+    assert result.distance_meters == 14200
+    assert result.summary == "via G-Maps Path"
+

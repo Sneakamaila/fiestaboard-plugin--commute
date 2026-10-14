@@ -17,6 +17,7 @@ class RouteRequest:
     avoid_highways: bool = False
     avoid_tolls: bool = False
     alternative_index: int = 0
+    maps_url: str = ""
 
 
 @dataclass

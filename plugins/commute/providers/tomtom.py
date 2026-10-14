@@ -12,6 +12,7 @@ from ..constants import (
     TOMTOM_GEOCODE_API_BASE,
     TOMTOM_ROUTING_API_BASE,
 )
+from ..google_maps_parser import is_google_maps_url, resolve_google_maps_route
 from ..models import RouteRequest, RouteTelemetry
 from .base import BaseCommuteProvider, ProviderError
 
@@ -116,27 +117,84 @@ class TomTomProvider(BaseCommuteProvider):
 
     def get_route(self, request: RouteRequest) -> RouteTelemetry:
         """Fetch routing telemetry for a single route request using TomTom calculateRoute."""
-        if not (request.origin and request.origin.strip()):
-            raise ProviderError(f"Route '{request.name}' has no origin address configured.")
-        if not (request.destination and request.destination.strip()):
-            raise ProviderError(f"Route '{request.name}' has no destination address configured.")
+        # Check if request specifies a Google Maps URL
+        maps_link = (request.maps_url or "").strip()
+        if not maps_link and is_google_maps_url(request.origin):
+            maps_link = request.origin.strip()
 
-        orig_coords = self.geocode(request.origin)
-        orig_bias: tuple[float, float] | None = None
-        try:
-            parts = orig_coords.split(",")
-            orig_bias = (float(parts[0]), float(parts[1]))
-        except Exception:
-            pass
+        via_summary = ""
+        if maps_link:
+            try:
+                resolved = resolve_google_maps_route(
+                    maps_link,
+                    timeout_seconds=self.timeout_seconds,
+                    session=self._session,
+                )
+            except Exception as e:
+                raise ProviderError(f"Could not resolve Google Maps URL: {e}") from e
 
-        dest_coords = self.geocode(request.destination, bias_coords=orig_bias)
+            # Origin
+            if resolved.origin_coords:
+                orig_coords = resolved.origin_coords
+            elif resolved.origin_address:
+                orig_coords = self.geocode(resolved.origin_address)
+            else:
+                orig_coords = self.geocode(request.origin)
 
-        # Assemble location path, including non-stop via point if specified
-        if request.via and request.via.strip():
-            via_coords = self.geocode(request.via, bias_coords=orig_bias)
-            locations_path = f"{orig_coords}:{via_coords}:{dest_coords}"
+            orig_bias: tuple[float, float] | None = None
+            try:
+                parts = orig_coords.split(",")
+                orig_bias = (float(parts[0]), float(parts[1]))
+            except Exception:
+                pass
+
+            # Destination
+            if resolved.destination_coords:
+                dest_coords = resolved.destination_coords
+            elif resolved.destination_address:
+                dest_coords = self.geocode(resolved.destination_address, bias_coords=orig_bias)
+            else:
+                dest_coords = self.geocode(request.destination, bias_coords=orig_bias)
+
+            # Stops / intermediate via waypoints
+            stops = [orig_coords]
+            if resolved.via_coords:
+                stops.extend(resolved.via_coords)
+                via_summary = "via G-Maps Path"
+            elif resolved.via_addresses:
+                for va in resolved.via_addresses:
+                    stops.append(self.geocode(va, bias_coords=orig_bias))
+                via_summary = "via G-Maps Path"
+            elif request.via and request.via.strip():
+                via_coords = self.geocode(request.via, bias_coords=orig_bias)
+                stops.append(via_coords)
+                via_summary = f"via {request.via.strip()}"
+
+            stops.append(dest_coords)
+            locations_path = ":".join(stops)
         else:
-            locations_path = f"{orig_coords}:{dest_coords}"
+            if not (request.origin and request.origin.strip()):
+                raise ProviderError(f"Route '{request.name}' has no origin address configured.")
+            if not (request.destination and request.destination.strip()):
+                raise ProviderError(f"Route '{request.name}' has no destination address configured.")
+
+            orig_coords = self.geocode(request.origin)
+            orig_bias: tuple[float, float] | None = None
+            try:
+                parts = orig_coords.split(",")
+                orig_bias = (float(parts[0]), float(parts[1]))
+            except Exception:
+                pass
+
+            dest_coords = self.geocode(request.destination, bias_coords=orig_bias)
+
+            # Assemble location path, including non-stop via point if specified
+            if request.via and request.via.strip():
+                via_coords = self.geocode(request.via, bias_coords=orig_bias)
+                locations_path = f"{orig_coords}:{via_coords}:{dest_coords}"
+                via_summary = f"via {request.via.strip()}"
+            else:
+                locations_path = f"{orig_coords}:{dest_coords}"
 
         url = f"{TOMTOM_ROUTING_API_BASE}/{locations_path}/json"
 
@@ -193,8 +251,10 @@ class TomTomProvider(BaseCommuteProvider):
 
         routes = data.get("routes", [])
         if not routes:
+            origin_desc = request.maps_url or request.origin
+            dest_desc = request.destination or "(from link)"
             raise ProviderError(
-                f"No route found for '{request.name}' between '{request.origin}' and '{request.destination}'."
+                f"No route found for '{request.name}' between '{origin_desc}' and '{dest_desc}'."
             )
 
         # Select alternative index
@@ -214,8 +274,10 @@ class TomTomProvider(BaseCommuteProvider):
         distance_meters = int(summary.get("lengthInMeters", 0))
 
         route_summary = ""
-        if request.via and request.via.strip():
-            route_summary = f"via {request.via.strip()}"
+        if via_summary:
+            route_summary = via_summary
+        elif maps_link:
+            route_summary = "via G-Maps"
         elif request.avoid_highways:
             route_summary = "via Landstr./Lokal"
         elif target_idx > 0:

@@ -67,6 +67,7 @@ from .formatters import (
     format_traffic_badge,
     format_traffic_status,
 )
+from .google_maps_parser import is_google_maps_url
 from .models import RouteRequest
 from .providers import (
     BaseCommuteProvider,
@@ -111,12 +112,19 @@ class CommutePlugin(PluginBase):
 
         # Route 1
         r1_name = str(cfg.get("route1_name") or "Route 1").strip()
+        r1_maps_url = str(cfg.get("route1_maps_url") or "").strip()
         r1_orig = str(cfg.get("route1_origin") or "").strip() or default_origin
         r1_dest = str(cfg.get("route1_destination") or "").strip() or default_destination
         r1_via = str(cfg.get("route1_via") or "").strip()
         r1_avoid_hw = bool(cfg.get("route1_avoid_highways", False))
         r1_avoid_tolls = bool(cfg.get("route1_avoid_tolls", False))
         r1_alt_idx = int(cfg.get("route1_alternative_index", 0))
+
+        # Fallback: if user pasted Google Maps link into origin or via
+        if not r1_maps_url and is_google_maps_url(r1_orig):
+            r1_maps_url = r1_orig
+        elif not r1_maps_url and is_google_maps_url(r1_via):
+            r1_maps_url = r1_via
 
         req1 = RouteRequest(
             name=r1_name,
@@ -126,16 +134,24 @@ class CommutePlugin(PluginBase):
             avoid_highways=r1_avoid_hw,
             avoid_tolls=r1_avoid_tolls,
             alternative_index=r1_alt_idx,
+            maps_url=r1_maps_url,
         )
 
         # Route 2
         r2_name = str(cfg.get("route2_name") or "Route 2").strip()
+        r2_maps_url = str(cfg.get("route2_maps_url") or "").strip()
         r2_orig = str(cfg.get("route2_origin") or "").strip() or default_origin
         r2_dest = str(cfg.get("route2_destination") or "").strip() or default_destination
         r2_via = str(cfg.get("route2_via") or "").strip()
         r2_avoid_hw = bool(cfg.get("route2_avoid_highways", False))
         r2_avoid_tolls = bool(cfg.get("route2_avoid_tolls", False))
         r2_alt_idx = int(cfg.get("route2_alternative_index", 1))
+
+        # Fallback: if user pasted Google Maps link into origin or via
+        if not r2_maps_url and is_google_maps_url(r2_orig):
+            r2_maps_url = r2_orig
+        elif not r2_maps_url and is_google_maps_url(r2_via):
+            r2_maps_url = r2_via
 
         req2 = RouteRequest(
             name=r2_name,
@@ -145,6 +161,7 @@ class CommutePlugin(PluginBase):
             avoid_highways=r2_avoid_hw,
             avoid_tolls=r2_avoid_tolls,
             alternative_index=r2_alt_idx,
+            maps_url=r2_maps_url,
         )
 
         return req1, req2
@@ -294,23 +311,37 @@ class CommutePlugin(PluginBase):
                 else:
                     errors.append("TomTom API Key is required unless Demo Mode is enabled.")
 
-            # Address checks
+            # Address & Route checks
             default_orig = (config.get("origin") or "").strip()
             default_dest = (config.get("destination") or "").strip()
 
+            r1_maps = (config.get("route1_maps_url") or "").strip()
             r1_orig = (config.get("route1_origin") or "").strip() or default_orig
             r1_dest = (config.get("route1_destination") or "").strip() or default_dest
+            r1_via = (config.get("route1_via") or "").strip()
+
+            r2_maps = (config.get("route2_maps_url") or "").strip()
             r2_orig = (config.get("route2_origin") or "").strip() or default_orig
             r2_dest = (config.get("route2_destination") or "").strip() or default_dest
+            r2_via = (config.get("route2_via") or "").strip()
 
-            if not r1_orig:
-                errors.append("Route 1 requires an origin address (or Default Start).")
-            if not r1_dest:
-                errors.append("Route 1 requires a destination address (or Default Destination).")
-            if not r2_orig:
-                errors.append("Route 2 requires an origin address (or Default Start).")
-            if not r2_dest:
-                errors.append("Route 2 requires a destination address (or Default Destination).")
+            r1_valid = bool(
+                r1_maps
+                or is_google_maps_url(r1_orig)
+                or is_google_maps_url(r1_via)
+                or (r1_orig and r1_dest)
+            )
+            if not r1_valid:
+                errors.append("Route 1 requires either a Google Maps Link or both Origin and Destination addresses.")
+
+            r2_valid = bool(
+                r2_maps
+                or is_google_maps_url(r2_orig)
+                or is_google_maps_url(r2_via)
+                or (r2_orig and r2_dest)
+            )
+            if not r2_valid:
+                errors.append("Route 2 requires either a Google Maps Link or both Origin and Destination addresses.")
 
         refresh_seconds = config.get("refresh_seconds")
         if refresh_seconds is not None:
