@@ -51,11 +51,14 @@ def resolve_gpx_path(file_path_or_name: str, base_dir: Optional[Path] = None) ->
             base_dir.parent / "routes" if base_dir.parent else None,
         ])
 
+    plugin_root = Path(__file__).resolve().parent.parent.parent
     cwd = Path.cwd()
     search_dirs.extend([
         cwd,
         cwd / "routes",
-        Path(__file__).resolve().parent.parent.parent / "routes",
+        plugin_root,
+        plugin_root / "routes",
+        Path.home() / ".fiestaboard" / "routes",
     ])
 
     for d in search_dirs:
