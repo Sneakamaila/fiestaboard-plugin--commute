@@ -24,10 +24,10 @@ def test_resolve_google_maps_route_shortlink_with_shaping():
     shortlink = "https://maps.app.goo.gl/sample123"
     expanded = (
         "https://www.google.de/maps/dir/Alexanderplatz,+10178+Berlin,+Deutschland/"
-        "Potsdamer+Platz,+10785+Berlin,+Deutschland/@53.5122874,10.1215512,14z/am=t/data="
-        "!3m2!1e3!4b1!4m19!4m18!1m10!1m1!1s0x47b18976b9762cf1:0xfbe757657ea4d026"
-        "!2m2!1d13.4050!2d52.5200!3m4!1m2!1d13.3501!2d52.5145!3s0x47b189e4726615b3:0xbcfce8145ae78550"
-        "!1m5!1m1!1s0x47b18be59b0ae9f1:0xab953257850284ab!2m2!1d13.3759!2d52.5096!3e0"
+        "Potsdamer+Platz,+10785+Berlin,+Deutschland/@52.515,13.38,14z/am=t/data="
+        "!3m2!1e3!4b1!4m19!4m18!1m10!1m1!1s0x47a84e373f035901:0x42120465b5e3b70"
+        "!2m2!1d13.4050!2d52.5200!3m4!1m2!1d13.3501!2d52.5145!3s0x47a851c888888888:0x8888888888888888"
+        "!1m5!1m1!1s0x47a851cb22222222:0x2222222222222222!2m2!1d13.3759!2d52.5096!3e0"
     )
 
     responses.add(
@@ -45,8 +45,8 @@ def test_resolve_google_maps_route_shortlink_with_shaping():
     assert resolved.via_coords == []
     # 1 internal shaping point (!3m4!)
     assert resolved.shaping_coords == ["52.5145,13.3501"]
-    assert "StartCity" in resolved.origin_address
-    assert "EndCity" in resolved.destination_address
+    assert "Alexanderplatz" in resolved.origin_address
+    assert "Potsdamer Platz" in resolved.destination_address
 
 
 def test_resolve_google_maps_route_expanded_url_without_network():

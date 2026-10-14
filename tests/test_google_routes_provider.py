@@ -175,7 +175,7 @@ def test_google_routes_with_google_maps_url():
 
     shortlink = "https://maps.app.goo.gl/sampleShortlink"
     expanded = (
-        "https://www.google.de/maps/dir/Start/Destination/@53.5,10.1,14z/am=t/data="
+        "https://www.google.de/maps/dir/Start/Destination/@52.5,13.4,14z/am=t/data="
         "!3m2!1e3!4b1!4m19!4m18!1m10!2m2!1d13.4050!2d52.5200!3m4!1m2!1d13.3501!2d52.5145!1m5!2m2!1d13.3759!2d52.5096!3e0"
     )
 
