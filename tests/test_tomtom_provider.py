@@ -217,7 +217,7 @@ def test_tomtom_get_route_with_google_maps_url():
         ]
     }
 
-    expected_tomtom_url = f"{TOMTOM_ROUTING_API_BASE}/52.52,13.405:52.5145,13.3501:52.5096,13.3759/json"
+    expected_tomtom_url = f"{TOMTOM_ROUTING_API_BASE}/52.52,13.405:52.5096,13.3759/json"
     responses.add(
         responses.GET,
         expected_tomtom_url,
@@ -239,5 +239,49 @@ def test_tomtom_get_route_with_google_maps_url():
     assert result.static_duration_minutes == 16
     assert result.delay_minutes == 1
     assert result.distance_meters == 14200
+    assert result.summary == "via G-Maps"
+
+
+@responses.activate
+def test_tomtom_get_route_with_real_intermediate_stops():
+    provider = TomTomProvider(api_key="test_key")
+
+    expanded_3stops = (
+        "https://www.google.de/maps/dir/Start/Middle/End/@53.5,10.1,14z/am=t/data="
+        "!3m2!1e3!4b1!4m24!1m5!2m2!1d13.4050!2d52.5200!1m5!2m2!1d13.3501!2d52.5145!1m5!2m2!1d13.3759!2d52.5096!3e0"
+    )
+
+    mock_route_resp = {
+        "routes": [
+            {
+                "summary": {
+                    "lengthInMeters": 16000,
+                    "travelTimeInSeconds": 1200,
+                    "trafficDelayInSeconds": 0,
+                    "noTrafficTravelTimeInSeconds": 1200,
+                }
+            }
+        ]
+    }
+
+    expected_tomtom_url = f"{TOMTOM_ROUTING_API_BASE}/52.52,13.405:52.5145,13.3501:52.5096,13.3759/json"
+    responses.add(
+        responses.GET,
+        expected_tomtom_url,
+        json=mock_route_resp,
+        status=200,
+    )
+
+    req = RouteRequest(
+        name="3 Stops Route",
+        origin="",
+        destination="",
+        maps_url=expanded_3stops,
+    )
+
+    result = provider.get_route(req)
+    assert result.name == "3 Stops Route"
+    assert result.duration_minutes == 20
     assert result.summary == "via G-Maps Path"
+
 

@@ -85,8 +85,6 @@ class GoogleRoutesProvider(BaseCommuteProvider):
                 })
             for va in resolved.via_addresses:
                 intermediates.append({"address": va, "via": True})
-            if request.via and request.via.strip():
-                intermediates.append({"address": request.via.strip(), "via": True})
 
             payload: Dict[str, Any] = {
                 "origin": origin_obj,

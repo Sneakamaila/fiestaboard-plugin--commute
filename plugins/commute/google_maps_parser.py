@@ -17,7 +17,13 @@ GMAPS_URL_REGEX = re.compile(
     re.IGNORECASE,
 )
 
-# Matches coordinate pairs in Google Maps URL data parameters: !1d<lon>!2d<lat>
+# Matches real stop coordinates in Google Maps URL data parameters: !2m2!1d<lon>!2d<lat>
+STOP_COORDS_REGEX = re.compile(r"!2m2!1d(-?\d+(?:\.\d+)?)\!2d(-?\d+(?:\.\d+)?)")
+
+# Matches dragged / shaping coordinates in Google Maps URL data parameters: !3m4!1m2!1d<lon>!2d<lat>
+SHAPING_COORDS_REGEX = re.compile(r"!3m4!1m2!1d(-?\d+(?:\.\d+)?)\!2d(-?\d+(?:\.\d+)?)")
+
+# Matches any coordinate pair in Google Maps URL data parameters: !1d<lon>!2d<lat>
 COORD_PROTOBUF_REGEX = re.compile(r"!1d(-?\d+(?:\.\d+)?)\!2d(-?\d+(?:\.\d+)?)")
 
 # Matches coordinate string like "52.5200,13.4050" or "52.5200, 13.4050"
@@ -34,6 +40,7 @@ class ResolvedGoogleRoute:
     origin_coords: str = ""
     destination_coords: str = ""
     via_coords: List[str] = field(default_factory=list)
+    shaping_coords: List[str] = field(default_factory=list)
     origin_address: str = ""
     destination_address: str = ""
     via_addresses: List[str] = field(default_factory=list)
@@ -99,14 +106,25 @@ def resolve_google_maps_route(
 
     unquoted_url = urllib.parse.unquote(target_url)
 
-    # 1. Try extracting protobuf coordinate pairs: !1d<lon>!2d<lat>
-    matches = COORD_PROTOBUF_REGEX.findall(unquoted_url)
-    points: List[Tuple[float, float]] = []
-    for lon_str, lat_str in matches:
+    # 1. Try extracting real stop coordinates: !2m2!1d<lon>!2d<lat>
+    stop_matches = STOP_COORDS_REGEX.findall(unquoted_url)
+    shaping_matches = SHAPING_COORDS_REGEX.findall(unquoted_url)
+
+    stop_points: List[Tuple[float, float]] = []
+    for lon_str, lat_str in stop_matches:
         try:
             pt = (float(lat_str), float(lon_str))
-            if not points or points[-1] != pt:
-                points.append(pt)
+            if not stop_points or stop_points[-1] != pt:
+                stop_points.append(pt)
+        except ValueError:
+            continue
+
+    shaping_points: List[Tuple[float, float]] = []
+    for lon_str, lat_str in shaping_matches:
+        try:
+            pt = (float(lat_str), float(lon_str))
+            if not shaping_points or shaping_points[-1] != pt:
+                shaping_points.append(pt)
         except ValueError:
             continue
 
@@ -134,26 +152,49 @@ def resolve_google_maps_route(
     if "waypoints" in qs and qs["waypoints"] and not via_addrs:
         via_addrs = [w.strip() for w in qs["waypoints"][0].split("|") if w.strip()]
 
-    # If protobuf coordinates were found (standard Google Maps share link)
-    if len(points) >= 2:
-        origin_coords = f"{points[0][0]},{points[0][1]}"
-        destination_coords = f"{points[-1][0]},{points[-1][1]}"
-        via_coords = [f"{p[0]},{p[1]}" for p in points[1:-1]]
+    # If real stop coordinates were found (!2m2!)
+    if len(stop_points) >= 2:
+        origin_coords = f"{stop_points[0][0]},{stop_points[0][1]}"
+        destination_coords = f"{stop_points[-1][0]},{stop_points[-1][1]}"
+        via_coords = [f"{p[0]},{p[1]}" for p in stop_points[1:-1]]
+        shaping_coords = [f"{p[0]},{p[1]}" for p in shaping_points]
     else:
-        # Check if stops in path or query are raw coordinates
-        origin_coords = ""
-        destination_coords = ""
-        via_coords = []
+        # Fallback to general protobuf coordinates regex (!1d...!2d...)
+        matches = COORD_PROTOBUF_REGEX.findall(unquoted_url)
+        points: List[Tuple[float, float]] = []
+        for lon_str, lat_str in matches:
+            try:
+                pt = (float(lat_str), float(lon_str))
+                if not points or points[-1] != pt:
+                    points.append(pt)
+            except ValueError:
+                continue
 
-        if origin_addr and COORD_REGEX.match(origin_addr):
-            origin_coords = COORD_REGEX.sub(r"\1,\2", origin_addr)
-            origin_addr = ""
-        if dest_addr and COORD_REGEX.match(dest_addr):
-            destination_coords = COORD_REGEX.sub(r"\1,\2", dest_addr)
-            dest_addr = ""
-        for va in via_addrs:
-            if COORD_REGEX.match(va):
-                via_coords.append(COORD_REGEX.sub(r"\1,\2", va))
+        if len(points) >= 2:
+            origin_coords = f"{points[0][0]},{points[0][1]}"
+            destination_coords = f"{points[-1][0]},{points[-1][1]}"
+            # Only consider intermediate points as via_coords if dir path also has intermediate stops
+            if len(via_addrs) > 0 and len(points) > 2:
+                via_coords = [f"{p[0]},{p[1]}" for p in points[1:-1]]
+                shaping_coords = []
+            else:
+                via_coords = []
+                shaping_coords = [f"{p[0]},{p[1]}" for p in points[1:-1]]
+        else:
+            origin_coords = ""
+            destination_coords = ""
+            via_coords = []
+            shaping_coords = []
+
+            if origin_addr and COORD_REGEX.match(origin_addr):
+                origin_coords = COORD_REGEX.sub(r"\1,\2", origin_addr)
+                origin_addr = ""
+            if dest_addr and COORD_REGEX.match(dest_addr):
+                destination_coords = COORD_REGEX.sub(r"\1,\2", dest_addr)
+                dest_addr = ""
+            for va in via_addrs:
+                if COORD_REGEX.match(va):
+                    via_coords.append(COORD_REGEX.sub(r"\1,\2", va))
 
     if not (origin_coords or origin_addr) or not (destination_coords or dest_addr):
         raise ValueError(
@@ -164,6 +205,7 @@ def resolve_google_maps_route(
         origin_coords=origin_coords,
         destination_coords=destination_coords,
         via_coords=via_coords,
+        shaping_coords=shaping_coords,
         origin_address=origin_addr,
         destination_address=dest_addr,
         via_addresses=[va for va in via_addrs if not COORD_REGEX.match(va)],

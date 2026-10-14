@@ -165,10 +165,6 @@ class TomTomProvider(BaseCommuteProvider):
                 for va in resolved.via_addresses:
                     stops.append(self.geocode(va, bias_coords=orig_bias))
                 via_summary = "via G-Maps Path"
-            elif request.via and request.via.strip():
-                via_coords = self.geocode(request.via, bias_coords=orig_bias)
-                stops.append(via_coords)
-                via_summary = f"via {request.via.strip()}"
 
             stops.append(dest_coords)
             locations_path = ":".join(stops)

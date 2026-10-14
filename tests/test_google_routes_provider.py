@@ -220,6 +220,6 @@ def test_google_routes_with_google_maps_url():
     assert "location" in payload["origin"]
     assert payload["origin"]["location"]["latLng"]["latitude"] == 52.52
     assert payload["destination"]["location"]["latLng"]["latitude"] == 52.5096
-    assert len(payload["intermediates"]) == 1
-    assert payload["intermediates"][0]["location"]["latLng"]["latitude"] == 52.5145
+    assert "intermediates" not in payload
+
 

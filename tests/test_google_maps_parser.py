@@ -20,7 +20,7 @@ def test_is_google_maps_url():
 
 
 @responses.activate
-def test_resolve_google_maps_route_shortlink():
+def test_resolve_google_maps_route_shortlink_with_shaping():
     shortlink = "https://maps.app.goo.gl/sample123"
     expanded = (
         "https://www.google.de/maps/dir/Alexanderplatz,+10178+Berlin,+Deutschland/"
@@ -39,9 +39,12 @@ def test_resolve_google_maps_route_shortlink():
 
     resolved = resolve_google_maps_route(shortlink)
 
+    # 2 real stops (!2m2!)
     assert resolved.origin_coords == "52.52,13.405"
     assert resolved.destination_coords == "52.5096,13.3759"
-    assert resolved.via_coords == ["52.5145,13.3501"]
+    assert resolved.via_coords == []
+    # 1 internal shaping point (!3m4!)
+    assert resolved.shaping_coords == ["52.5145,13.3501"]
     assert "StartCity" in resolved.origin_address
     assert "EndCity" in resolved.destination_address
 
@@ -56,9 +59,24 @@ def test_resolve_google_maps_route_expanded_url_without_network():
 
     assert resolved.origin_coords == "52.52,13.405"
     assert resolved.destination_coords == "52.5,13.3"
-    assert resolved.via_coords == ["52.51,13.35"]
+    assert resolved.via_coords == []
+    assert resolved.shaping_coords == ["52.51,13.35"]
     assert resolved.origin_address == "Start Location"
     assert resolved.destination_address == "End Location"
+
+
+def test_resolve_google_maps_route_with_real_intermediate_stops():
+    expanded = (
+        "https://www.google.de/maps/dir/Start/Middle/End/@52.5,13.4,12z/data="
+        "!4m24!1m5!2m2!1d13.40!2d52.52!1m5!2m2!1d13.35!2d52.51!1m5!2m2!1d13.30!2d52.50"
+    )
+
+    resolved = resolve_google_maps_route(expanded)
+
+    assert resolved.origin_coords == "52.52,13.4"
+    assert resolved.destination_coords == "52.5,13.3"
+    assert resolved.via_coords == ["52.51,13.35"]
+    assert resolved.shaping_coords == []
 
 
 def test_resolve_google_maps_route_path_addresses_only():
