@@ -39,3 +39,7 @@ ROUTES_FIELD_MASK = (
 # TomTom Routing & Search API (100% Free Tier - 2,500 daily requests, no credit card)
 TOMTOM_ROUTING_API_BASE = "https://api.tomtom.com/routing/1/calculateRoute"
 TOMTOM_GEOCODE_API_BASE = "https://api.tomtom.com/search/2/geocode"
+
+# HERE Technologies Routing v8 & Geocoding v7 API (30,000 monthly transactions)
+HERE_ROUTING_API_BASE = "https://router.hereapi.com/v8/routes"
+HERE_GEOCODE_API_BASE = "https://geocode.search.hereapi.com/v1/geocode"

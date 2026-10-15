@@ -74,6 +74,7 @@ from .providers import (
     BaseCommuteProvider,
     DemoProvider,
     GoogleRoutesProvider,
+    HereProvider,
     ProviderError,
     TomTomProvider,
 )
@@ -102,8 +103,12 @@ class CommutePlugin(PluginBase):
             traffic_model = str(cfg.get("traffic_model") or "best_guess").strip()
             return GoogleRoutesProvider(api_key=api_key, traffic_model=traffic_model)
 
-        # Default provider is TomTom (100% free, 2,500 calls/day, no credit card needed)
         country_set = str(cfg.get("country_code") or "DE").strip()
+
+        if provider_name == "here":
+            return HereProvider(api_key=api_key, country_set=country_set)
+
+        # Default provider is TomTom (100% free, 2,500 calls/day, no credit card needed)
         return TomTomProvider(api_key=api_key, country_set=country_set)
 
     def _build_route_requests(self, cfg: Dict[str, Any]) -> tuple[RouteRequest, RouteRequest]:
@@ -323,6 +328,8 @@ class CommutePlugin(PluginBase):
             if not api_key:
                 if provider == "google_routes":
                     errors.append("Google Cloud API Key is required when using Google Routes unless Demo Mode is enabled.")
+                elif provider == "here":
+                    errors.append("HERE API Key is required when using HERE provider unless Demo Mode is enabled.")
                 else:
                     errors.append("TomTom API Key is required unless Demo Mode is enabled.")
 

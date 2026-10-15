@@ -79,8 +79,8 @@ In the FiestaBoard Web UI under **Integrations > Smart Commute**, configure your
 | Setting | Type | Default | Description |
 |---|---|---|---|
 | `enabled` | boolean | `true` | Enable or disable the plugin |
-| `provider` | string | `"tomtom"` | Choose `"tomtom"`, `"google_routes"`, or `"demo"` |
-| `api_key` | string | `""` | API Key from TomTom or Google Cloud |
+| `provider` | string | `"here"` | Choose `"here"` (Recommended, German automotive traffic), `"tomtom"`, `"google_routes"`, or `"demo"` |
+| `api_key` | string | `""` | API Key from HERE Technologies, TomTom, or Google Cloud |
 | `origin` | string | `""` | Default start address (e.g. `Musterstr. 1, Berlin` or `52.52,13.40`) |
 | `destination` | string | `""` | Default destination address (e.g. `Alexanderplatz, Berlin` or `52.51,13.38`) |
 | `unit_system` | string | `"metric"` | Choose `"metric"` (km) or `"imperial"` (miles) |
@@ -119,12 +119,19 @@ In the FiestaBoard Web UI under **Integrations > Smart Commute**, configure your
 
 ---
 
-## 🔑 Getting a Free TomTom API Key (Recommended)
+## 🔑 Getting an API Key
 
+### Option A: HERE Technologies (Recommended for German Live Traffic)
+1. Sign up for a free developer account at [platform.here.com](https://platform.here.com/).
+2. Under **Access Management > API Keys**, create and copy a new **REST API Key**.
+3. In FiestaBoard, set `provider` to `"here"` and paste your API key.
+4. Includes **30,000 free transactions/month**. Polling every 5 minutes uses only ~8,600 transactions/month (well within the free allowance!).
+
+### Option B: TomTom (100% Free, No Credit Card Required)
 1. Sign up for a free developer account at [developer.tomtom.com](https://developer.tomtom.com/). **No credit card is required!**
 2. In your dashboard under **My Apps / Keys**, copy your default API Key.
-3. Paste the key into the `api_key` field in FiestaBoard.
-4. With 2,500 free requests per day, polling every 5 minutes only uses ~288 requests/day (~11% of the free allowance).
+3. In FiestaBoard, set `provider` to `"tomtom"` and paste your API key.
+4. Includes **2,500 free requests per day**.
 
 ---
 

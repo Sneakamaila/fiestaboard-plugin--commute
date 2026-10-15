@@ -20,14 +20,14 @@
       "provider": {
         "type": "string",
         "title": "Data Provider",
-        "description": "Select routing data provider. TomTom is 100% free with 2,500 daily requests and no credit card required.",
-        "enum": ["tomtom", "google_routes", "demo"],
-        "default": "tomtom"
+        "description": "Select routing data provider. HERE Maps (BMW/Mercedes/Audi automotive traffic, 30,000/mo free), TomTom (2,500/day free), or Google Routes.",
+        "enum": ["here", "tomtom", "google_routes", "demo"],
+        "default": "here"
       },
       "api_key": {
         "type": "string",
-        "title": "API Key (TomTom / Google)",
-        "description": "API Key from developer.tomtom.com (Free, no credit card) or Google Cloud Routes API.",
+        "title": "API Key (HERE / TomTom / Google)",
+        "description": "API Key from HERE platform (platform.here.com), TomTom (developer.tomtom.com), or Google Cloud.",
         "format": "password"
       },
       "country_code": {

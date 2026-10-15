@@ -41,6 +41,15 @@ def test_validate_config(manifest_dict):
     })
     assert any("Google Cloud API Key is required" in err for err in errors_google)
 
+    # Invalid: missing api_key when provider is here
+    errors_here = plugin.validate_config({
+        "provider": "here",
+        "demo_mode": False,
+        "origin": "Home",
+        "destination": "Work",
+    })
+    assert any("HERE API Key is required" in err for err in errors_here)
+
     # Invalid: missing origin and destination (and no GPX / Google Maps link)
     errors = plugin.validate_config({"api_key": "token_123"})
     assert any("requires either a GPX file, Google Maps Link" in err for err in errors)
