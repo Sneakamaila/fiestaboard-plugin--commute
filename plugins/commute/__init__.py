@@ -85,6 +85,10 @@ logger = logging.getLogger(__name__)
 class CommutePlugin(PluginBase):
     """Smart Commute & Traffic comparison plugin for FiestaBoard."""
 
+    def __init__(self, manifest: dict[str, Any]):
+        super().__init__(manifest)
+        self._enabled = True
+
     @property
     def plugin_id(self) -> str:
         return "commute"
@@ -189,6 +193,15 @@ class CommutePlugin(PluginBase):
     def fetch_data(self) -> PluginResult:
         """Fetch commute telemetry and return formatted variables."""
         cfg = self.config or {}
+
+        # Short-circuit if integration is disabled in FiestaBoard or config
+        if not getattr(self, "enabled", True) or cfg.get("enabled") is False:
+            return PluginResult(
+                available=False,
+                data=None,
+                error="Commute plugin is disabled",
+            )
+
         unit_system = str(cfg.get("unit_system") or "metric").lower()
         delay_thresh = int(cfg.get("delay_threshold_mins") or DEFAULT_DELAY_THRESHOLD_MINS)
         heavy_thresh = int(cfg.get("heavy_delay_threshold_mins") or DEFAULT_HEAVY_DELAY_THRESHOLD_MINS)
@@ -268,6 +281,10 @@ class CommutePlugin(PluginBase):
 
     def check_triggers(self) -> List[TriggerResult]:
         """Check for high-priority notification events (heavy delays or better alternative)."""
+        cfg = self.config or {}
+        if not getattr(self, "enabled", True) or cfg.get("enabled") is False:
+            return []
+
         triggers: List[TriggerResult] = []
         result = self.fetch_data()
         if not result.available or not result.data:

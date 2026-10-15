@@ -196,3 +196,62 @@ def test_manifest_previews_and_teaser_compliance(manifest_dict):
                 c = row[pos].upper()
                 assert c in valid_chars, f"Unmappable character '{c}' in preview {p_idx} row {r_idx}"
                 pos += 1
+
+
+def test_fetch_data_disabled_via_config(manifest_dict, monkeypatch):
+    """Ensure no provider calls or network requests occur when disabled in config."""
+    plugin = CommutePlugin(manifest=manifest_dict)
+    plugin.config = {
+        "enabled": False,
+        "api_key": "some_key",
+        "origin": "Berlin",
+        "destination": "Potsdam",
+    }
+
+    # If _get_provider were called, fail the test
+    def fail_provider(*args, **kwargs):
+        raise AssertionError("_get_provider should not be called when plugin is disabled!")
+
+    monkeypatch.setattr(plugin, "_get_provider", fail_provider)
+
+    result = plugin.fetch_data()
+    assert result.available is False
+    assert result.data is None
+    assert "disabled" in str(result.error).lower()
+
+
+def test_fetch_data_disabled_via_property(manifest_dict, monkeypatch):
+    """Ensure no provider calls occur when plugin.enabled is set to False."""
+    plugin = CommutePlugin(manifest=manifest_dict)
+    plugin.enabled = False
+    plugin.config = {
+        "api_key": "some_key",
+        "origin": "Berlin",
+        "destination": "Potsdam",
+    }
+
+    def fail_provider(*args, **kwargs):
+        raise AssertionError("_get_provider should not be called when plugin is disabled!")
+
+    monkeypatch.setattr(plugin, "_get_provider", fail_provider)
+
+    result = plugin.fetch_data()
+    assert result.available is False
+    assert result.data is None
+    assert "disabled" in str(result.error).lower()
+
+
+def test_check_triggers_disabled(manifest_dict, monkeypatch):
+    """Ensure triggers return empty list when disabled."""
+    plugin = CommutePlugin(manifest=manifest_dict)
+    plugin.enabled = False
+    plugin.config = {"enabled": False}
+
+    def fail_fetch(*args, **kwargs):
+        raise AssertionError("fetch_data should not be called when check_triggers is disabled!")
+
+    monkeypatch.setattr(plugin, "fetch_data", fail_fetch)
+
+    triggers = plugin.check_triggers()
+    assert triggers == []
+
